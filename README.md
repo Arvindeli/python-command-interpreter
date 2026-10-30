@@ -1,6 +1,10 @@
 # Python command interpreter
 
-A Python command interpreter with quoted-argument parsing, filesystem commands, input validation, and interactive command suggestions. Built with the Python standard library.
+A Python command interpreter with quoted-argument parsing, filesystem commands,
+input validation, and interactive command suggestions. Built with the Python
+standard library.
+
+## Run
 
 Open a terminal in the project folder and run:
 
@@ -8,27 +12,27 @@ Open a terminal in the project folder and run:
 python3 main.py
 ```
 
-Commands operate relative to the interpreter's current directory. This is not a
-sandbox: absolute paths and `cd` can reach files outside the project folder.
-For a demonstration, use a disposable directory and disposable files.
+Commands operate on real files relative to the interpreter's current directory.
+Absolute paths and `cd` can access other directories.
 
 ## Commands
 
 | Syntax | Behavior |
 | --- | --- |
 | `pwd` | Print the current directory. |
-| `ls` | List current-directory entries, including hidden entries; order is unspecified. |
+| `ls` | List current-directory entries, including hidden entries. |
 | `cd [path]` | Change directory; no argument goes home. Expands `~`. |
-| `touch file` or `ni file` | Create an empty file if absent; preserve existing contents. Existing-file timestamps are not explicitly updated. |
+| `touch file` or `ni file` | Create a file if absent; preserve existing contents without explicitly updating timestamps. |
 | `mkdir directory` | Create one directory; its parent must exist. |
-| `rm file` | Remove a file without confirmation; refuse directories and symlinks to directories. File symlinks and broken symlinks are unlinked. |
-| `rmdir directory` | Remove an empty directory without confirmation. |
-| `cat file` | Display text without adding a newline, using Python's default text encoding. Decoding failures display an error. |
+| `rm file` | Remove a file or file symlink; refuse directories and symlinks to directories. Broken symlinks are unlinked. |
+| `rmdir directory` | Remove an empty directory. |
+| `cat file` | Display text using Python's default text encoding without adding a newline. |
 | `cp source destination` | Copy a non-directory source to a file or into a directory. |
 | `mv source destination` | Move a non-directory source to a path or into a directory. |
-| `exit` | Exit; no arguments accepted. |
+| `exit` | Exit the interpreter. |
 
-Parsing uses `shlex`, so quote filenames containing spaces:
+Commands validate argument counts and report filesystem errors. Parsing uses
+`shlex`, so filenames containing spaces can be quoted:
 
 ```text
 mkdir "demo folder"
@@ -36,39 +40,41 @@ cd "demo folder"
 touch "notes one.txt"
 cp "notes one.txt" "notes two.txt"
 mv "notes two.txt" "renamed notes.txt"
+ls
 ```
 
-Unrecognized commands may receive one typo suggestion. Confirm with `y`, `yes`,
-or `yeah`; other answers decline it. EOF at either prompt exits cleanly. Ctrl+C
-at either prompt cancels that input and returns to the main prompt without
-executing the pending command.
+Unrecognized commands may receive a suggested correction. Confirm with `y`,
+`yes`, or `yeah`; other answers decline it. EOF at either prompt exits cleanly.
+Ctrl+C at either prompt cancels the pending input and returns to the main prompt.
 
-## File changes and limitations
+## File operations
 
-- Copy and move operations do not request overwrite confirmation.
-- `cp source existing_file` replaces its contents. Copying into a directory can
-  overwrite a same-named file inside it.
-- On Linux, `mv source existing_file` can replace the destination. Moving into a
-  directory refuses an already existing same-named destination. Exact replacement
-  behavior follows the operating system and Python's `shutil` functions.
-- Copying is not atomic. A failed copy can leave a destination created, truncated,
-  or partially changed. A move that falls back to copying across filesystems can
-  also leave destination changes after failure. Errors do not imply rollback.
-- Deletion has no undo or confirmation. `rmdir` refuses nonempty directories.
-- Directory copying/moving, recursive operations, command options, multiple file
-  operands, external commands, pipes, redirection, wildcard expansion, and
-  environment-variable expansion are unsupported. Only `cd` expands `~`.
-- Ctrl+C recovery is implemented at the prompts; interruption of a running
-  filesystem operation is not handled. `cat` can display some text before a later
-  read or decoding error.
+- Copying, moving, and deletion proceed without confirmation; deletion has no undo.
+- Copying to an existing file replaces its contents, including a same-named file
+  inside a destination directory.
+- On Linux, moving to an existing file can replace it. Moving into a directory
+  refuses an existing same-named destination. Replacement behavior follows
+  Python's `shutil` functions and the operating system.
+- Copies and moves across filesystems are not atomic. A failed operation can
+  leave a destination created or partially changed.
+- `cat` reports decoding errors; text already displayed remains on screen.
 
-## Checks
+## Scope
 
-From a terminal in the project folder:
+Implements built-in commands with one source operand and, for copy/move, one
+destination. External programs, pipes, redirection, recursive directory
+operations, command options, wildcards, and environment-variable expansion are
+outside its scope. Only `cd` expands `~`. Ctrl+C cancellation applies at the
+input prompts.
+
+## Tests
+
+From the project folder:
 
 ```bash
 python3 -m unittest -v test_main.py
 ```
 
-Tests use temporary directories, restore the original working directory, and mock
-permission failures and races. Existing sample files are not used or changed.
+Tests cover quoted arguments, filesystem operations, overwrite behavior, input
+handling, and error reporting. They use temporary directories and simulated
+permission failures and races, restoring the original working directory afterward.
